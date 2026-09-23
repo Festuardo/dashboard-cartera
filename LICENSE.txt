@@ -1,0 +1,8 @@
+Copyright © 2026 Fgarcia. Todos los derechos reservados.
+
+Dashboard de Gestión de Cartera.
+Diseño y código propio: Fgarcia.
+
+No se concede una licencia de distribución, modificación, sublicencia ni comercialización del código propio. Para dichos usos se requiere autorización escrita de Fgarcia.
+
+Las dependencias de terceros conservan sus propias licencias y derechos. SheetJS Community Edition se distribuye bajo Apache License 2.0; ver assets/SheetJS-LICENSE.txt.

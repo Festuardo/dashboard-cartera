@@ -13,6 +13,6 @@
  el('dismissInstall').onclick=()=>{dismissed=true;try{sessionStorage.setItem('fgCarteraInstallDismissed','1')}catch(e){}sync()};
  sync();
  if('serviceWorker' in navigator&&['https:','http:'].includes(location.protocol)){
- window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(()=>{}));
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'}).catch(()=>{}));
  }
 })();

@@ -7,6 +7,10 @@ Aplicación web instalable para seguimiento de cartera, crecimiento y metas por 
 - Agencia: suma únicamente los créditos registrados en ella.
 - Asesor: suma todos sus créditos, incluso los de otras agencias.
 - Excluye `Fondo CHN` en `Producto Asignado` de base, cierres y actual.
+- Ignora saldos negativos en las sumas de base, cierres y actual. Conserva los desembolsos.
+- Filtra asesores por Cod Agencia (1106 → TO06); otros usuarios con desembolsos del mes aparecen al final.
+- El total de la tabla corresponde a toda la agencia, independientemente de los asesores visibles.
+- Encabezados y primera columna fijos en la tabla de escritorio; tarjetas en móvil.
 - Metas independientes y detalle mensual. Reporte Excel.
 - Guardado automático local con IndexedDB y alternativa localStorage.
 - Diseño adaptable a teléfono, tablet y computadora.

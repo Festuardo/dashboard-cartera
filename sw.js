@@ -1,8 +1,8 @@
 /* © 2026 Fgarcia. Todos los derechos reservados. */
 const SCOPE = self.registration.scope;
 const PREFIX = 'fg-cartera-' + new URL(SCOPE).pathname + '-';
-const CACHE = PREFIX + 'v3';
-const CORE = ['./','./index.html','./manifest.webmanifest','./pwa.js','./assets/xlsx.full.min.js','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png','./LICENSE.txt'];
+const CACHE = PREFIX + 'v4';
+const CORE = ['./','./index.html','./manifest.webmanifest','./pwa.js','./reports.js','./assets/jspdf.umd.min.js','./assets/jspdf.plugin.autotable.min.js','./assets/xlsx.full.min.js','./assets/icon-192.png','./assets/icon-512.png','./assets/icon-maskable-512.png','./LICENSE.txt'];
 const appURL = path => new URL(path, SCOPE).href;
 const ASSETS = new Set(CORE.map(appURL));
 self.addEventListener('install', event => {

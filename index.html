@@ -54,6 +54,10 @@ footer{text-align:center;color:#86939d;font-size:11px;padding:18px}
 .advisor-table-wrap th:first-child{z-index:4;background:#193f5d}
 .advisor-table-wrap tr.agency-total td:first-child{background:#eaf4fb}
 }
+
+.report-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.chart-card{border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}.chart-card h3{font-size:15px;margin:0 0 10px}.chart-card svg{display:block;width:100%;height:auto}.chart-scroll{max-height:520px;overflow:auto}.chart-legend{font-size:12px;color:var(--muted);margin:10px 0}.chart-legend span{display:inline-block;margin-right:15px}.chart-legend i{display:inline-block;width:10px;height:10px;margin-right:5px;border-radius:3px}
+@media(max-width:900px){.report-charts{grid-template-columns:1fr}}
+@media(max-width:700px){.chart-scroll svg{min-width:560px}}
 </style>
 </head>
 <body>
@@ -94,7 +98,7 @@ footer{text-align:center;color:#86939d;font-size:11px;padding:18px}
 
 <section class="summary">
   <article class="card"><small>CARTERA ACTUAL DE LA AGENCIA</small><strong id="kPortfolio">Q0.00</strong><div class="sub" id="kCredits">0 créditos</div></article>
-  <article class="card purple"><small>CARTERA 31/12/2025</small><strong id="kBase">—</strong><div class="sub">Base anual</div></article>
+  <article class="card purple"><small>CARTERA BASE</small><strong id="kBase">—</strong><div class="sub" id="kBaseDate">Base anual o primer mes</div></article>
   <article class="card green"><small>CRECIMIENTO ACUMULADO</small><strong id="kGrowth">—</strong><div class="sub" id="kGrowthPct">Sin base</div></article>
   <article class="card"><small>DESEMBOLSADO MES ACTUAL</small><strong id="kDisb">Q0.00</strong><div class="sub" id="kDisbCases">0 operaciones</div></article>
   <article class="card red"><small>MORA PROYECTADA &gt;30</small><strong id="kMora">Q0.00</strong><div class="sub" id="kMoraCases">0 casos</div></article>
@@ -105,14 +109,21 @@ footer{text-align:center;color:#86939d;font-size:11px;padding:18px}
 <section class="panel">
   <div class="section-title">
     <div><h2>Desempeño por asesor</h2><small>Asesores de la agencia primero · otros usuarios con desembolsos del mes al final</small></div>
-    <div class="toolbar"><button id="clearData" class="btn btn-danger">Limpiar todos los datos</button><button id="exportBtn" class="btn btn-light">Descargar reporte</button></div>
+    <div class="toolbar"><button id="clearData" class="btn btn-danger">Limpiar todos los datos</button><button id="exportBtn" class="btn btn-light">Descargar Excel</button><button id="exportPdfBtn" class="btn btn-primary">Descargar PDF</button></div>
   </div>
   <p class="table-hint advisor-hint">Desliza la tabla horizontalmente para ver todas las metas.</p><div class="table-wrap advisor-table-wrap" tabindex="0" aria-label="Desempeño por asesor">
     <table class="advisor-table">
-      <thead><tr><th>Asesor</th><th>Cartera actual</th><th>Base 31/12/2025</th><th>Cierre mes anterior</th><th>Crecimiento mensual asignado (Q)</th><th>Crecimiento acumulado real</th><th>Crecimiento acumulado requerido</th><th>Saldo meta acumulada</th><th>Cumplimiento acumulado</th><th>Crecimiento mensual real</th><th>Saldo meta mensual</th><th>Cumplimiento mensual</th><th>Desembolsado mes</th><th>Mora &gt;30</th><th>% mora</th><th>Casos mora</th><th>Detalle mensual</th></tr></thead>
+      <thead><tr><th>Asesor</th><th>Cartera actual</th><th>Base del asesor</th><th>Cierre mes anterior</th><th>Crecimiento mensual asignado (Q)</th><th>Crecimiento acumulado real</th><th>Crecimiento acumulado requerido</th><th>Saldo meta acumulada</th><th>Cumplimiento acumulado</th><th>Crecimiento mensual real</th><th>Saldo meta mensual</th><th>Cumplimiento mensual</th><th>Desembolsado mes</th><th>Mora proyectada &gt;30</th><th>% mora proyectada</th><th>Casos mora</th><th>Detalle mensual</th></tr></thead>
       <tbody id="advisorRows"></tbody>
     </table>
   </div>
+</section>
+
+<section class="panel" id="reportPanel">
+<div class="section-title"><div><h2>Reportes y gráficas</h2><small>Selecciona un asesor para su detalle o conserva todos para el informe de agencia.</small></div></div>
+<div class="controls"><div class="field"><label for="reportAdvisor">Asesor del reporte</label><select id="reportAdvisor"><option value="">Todos los asesores</option></select></div><div class="field"><label for="reportFrom">Desde el mes</label><input id="reportFrom" type="month" value="2026-01"></div><div class="field"><label for="reportTo">Hasta el mes</label><input id="reportTo" type="month"></div></div>
+<p class="note">El resumen corresponde al corte actual. El período filtra el detalle histórico. Los totales de agencia provienen de su cartera; no suman las bases individuales ni los saldos de distintos meses. Mora real: créditos con más de 30 días de atraso.</p>
+<div id="reportCharts" class="report-charts"></div>
 </section>
 
 <section class="grid2">
@@ -120,7 +131,7 @@ footer{text-align:center;color:#86939d;font-size:11px;padding:18px}
     <div class="section-title"><div><h2>Cierres mensuales cargados</h2><small>Bitácora histórica por agencia</small></div><button id="clearHistory" class="btn btn-danger">Borrar cierres</button></div>
     <div class="table-wrap">
       <table style="min-width:900px">
-        <thead><tr><th>Fecha</th><th>Archivo</th><th class="money">Cartera agencia</th><th>Asesores</th><th>Acción</th></tr></thead>
+        <thead><tr><th>Fecha</th><th>Archivo</th><th class="money">Cartera agencia</th><th>Asesores</th><th>Mora real &gt;30</th><th>% mora</th><th>Casos mora</th><th>Acción</th></tr></thead>
         <tbody id="historyRows"></tbody>
       </table>
     </div>
@@ -134,7 +145,7 @@ footer{text-align:center;color:#86939d;font-size:11px;padding:18px}
 
 <section id="detailPanel" class="panel" hidden>
 <div class="section-title"><div><h2 id="detailTitle">Detalle mensual</h2><small id="detailNote"></small></div><button id="closeDetail" class="btn btn-light">Cerrar detalle</button></div>
-<div class="table-wrap"><table style="min-width:1250px"><thead><tr><th>Mes / corte</th><th>Estado</th><th>Saldo anterior</th><th>Saldo al corte</th><th>Aporte del mes</th><th>Meta crecimiento mensual</th><th>Cumplimiento mensual</th><th>Crecimiento acumulado</th><th>Meta crecimiento acumulada</th><th>Cumplimiento acumulado</th></tr></thead><tbody id="detailRows"></tbody></table></div>
+<div class="table-wrap"><table style="min-width:1250px"><thead><tr><th>Mes / corte</th><th>Estado</th><th>Saldo anterior</th><th>Saldo al corte</th><th>Aporte del mes</th><th>Meta crecimiento mensual</th><th>Cumplimiento mensual</th><th>Crecimiento acumulado</th><th>Meta crecimiento acumulada</th><th>Cumplimiento acumulado</th><th>Mora real &gt;30 días</th><th>% mora real</th><th>Casos mora</th></tr></thead><tbody id="detailRows"></tbody></table></div>
 </section>
 </main>
 <footer class="copyright"><strong>© 2026 Fgarcia</strong> · Todos los derechos reservados.<br>Dashboard de Gestión de Cartera · Diseño y desarrollo de Fgarcia.<br><a href="./LICENSE.txt">Aviso de derechos de autor</a></footer>
@@ -201,6 +212,7 @@ async function restore(){
  if(loaded)state={...state,...loaded,closures:loaded.closures||[],goals:loaded.goals||{},agencyGoals:loaded.agencyGoals||{}};
  migrateUnfilteredSources();
  migrateBalanceSources();
+ [state.base,state.current,...state.closures].filter(src=>src&&!src.needsReload&&Array.isArray(src.records)).forEach(src=>{src.summary=buildSummary(src.records,!src.warnings?.days)});
  if(loaded){try{await persistState(JSON.parse(JSON.stringify(state)));storageMessage('Datos locales recuperados.')}catch(e){storageMessage('Datos recuperados, pero el guardado local no está disponible.',true)}}
  else storageMessage('Guardado automático local listo. Carga tus carteras para comenzar.');
 }
@@ -236,13 +248,24 @@ async function readPortfolioFile(file,keepDetails){
   days:ix.days>=0?num(r[ix.days]):0,disbursed:ix.disbursed>=0?num(r[ix.disbursed]):0,disbDate:ix.disbDate>=0?parseDate(r[ix.disbDate]):''
  })).filter(r=>r.agency&&r.balance!==0);
  const excluded=allRecords.filter(r=>norm(r.product)==='FONDOCHN'),recs=allRecords.filter(r=>norm(r.product)!=='FONDOCHN');
- return {fileName:file.name,sheetName,filterPolicy:'exclude-fondo-chn-v1',balancePolicy:'ignore-negative-v1',excludedCount:excluded.length,excludedBalance:excluded.reduce((n,r)=>n+r.balance,0),records:keepDetails?recs:null,summary:buildSummary(allRecords),warnings:{days:ix.days<0,disbursed:ix.disbursed<0,disbDate:ix.disbDate<0}}
+ return {fileName:file.name,sheetName,filterPolicy:'exclude-fondo-chn-v1',balancePolicy:'ignore-negative-v1',excludedCount:excluded.length,excludedBalance:excluded.reduce((n,r)=>n+r.balance,0),records:keepDetails?recs:null,summary:buildSummary(allRecords,ix.days>=0),warnings:{days:ix.days<0,disbursed:ix.disbursed<0,disbDate:ix.disbDate<0}}
 }
-function buildSummary(recs){
+function buildSummary(recs,hasDays=true){
  const agencies={};
- recs.forEach(r=>{const ak=norm(r.agency);if(!agencies[ak])agencies[ak]={name:r.agency,code:r.agencyCode||'',portfolio:0,advisors:{}};const A=agencies[ak];if(!A.code&&r.agencyCode)A.code=r.agencyCode;if(norm(r.product)==='FONDOCHN')return;A.portfolio+=balanceAmount(r.balance);
-  const k=norm(r.advisor);if(!k)return;if(!A.advisors[k])A.advisors[k]={advisor:r.advisor,portfolio:0};A.advisors[k].portfolio+=balanceAmount(r.balance)});
- return agencies
+ const empty=()=>({portfolio:0,mora:hasDays?0:null,moraCases:hasDays?0:null});
+ recs.forEach(r=>{
+  const ak=norm(r.agency);
+  if(!agencies[ak])agencies[ak]={name:r.agency,code:r.agencyCode||'',...empty(),advisors:{}};
+  const A=agencies[ak];if(!A.code&&r.agencyCode)A.code=r.agencyCode;
+  if(norm(r.product)==='FONDOCHN')return;
+  const balance=balanceAmount(r.balance);A.portfolio+=balance;
+  const overdue=hasDays&&balance>0&&num(r.days)>30;
+  if(overdue){A.mora+=balance;A.moraCases++}
+  const k=norm(r.advisor);if(!k)return;
+  if(!A.advisors[k])A.advisors[k]={advisor:r.advisor,...empty()};
+  const x=A.advisors[k];x.portfolio+=balance;if(overdue){x.mora+=balance;x.moraCases++}
+ });
+ return agencies;
 }
 function availableAgencies(){
  const m=new Map();
@@ -261,8 +284,11 @@ function refreshReference(){
  if(opts.some(x=>x.date===old))$('referenceClose').value=old
 }
 function globalAdvisors(src){
- const result={};Object.values(src?.summary||{}).forEach(a=>Object.values(a.advisors||{}).forEach(x=>{
- const k=norm(x.advisor);if(!result[k])result[k]={advisor:x.advisor,portfolio:0};result[k].portfolio+=num(x.portfolio);
+ const result={};if(!src||src.needsReload)return result;
+ Object.values(src.summary||{}).forEach(a=>Object.values(a.advisors||{}).forEach(x=>{
+  const k=norm(x.advisor);if(!result[k])result[k]={advisor:x.advisor,portfolio:0,mora:0,moraCases:0};
+  const out=result[k];out.portfolio+=num(x.portfolio);
+  for(const field of ['mora','moraCases'])out[field]=out[field]!=null&&x[field]!=null?out[field]+x[field]:null;
  }));return result;
 }
 function selectedAdvisorPrefix(){
@@ -272,7 +298,7 @@ function selectedAdvisorPrefix(){
  return code&&/\d{2}$/.test(txt(code))?'TO'+txt(code).slice(-2):'';
 }
 function visibleAdvisorKeys(){
- const agency=norm($('agency').value),sources=[state.current,period().closure,state.base],visible=new Set(),prefix=selectedAdvisorPrefix();
+ const agency=norm($('agency').value),sources=[state.current,state.base,...state.closures.filter(c=>c.date<=$('cutoff').value)],visible=new Set(),prefix=selectedAdvisorPrefix();
  sources.filter(src=>src&&!src.needsReload).forEach(src=>{
   Object.keys(globalAdvisors(src)).forEach(k=>{
    if(agency==='ALL'||(prefix?k.startsWith(prefix):Object.values(src.summary?.[agency]?.advisors||{}).some(x=>norm(x.advisor)===k)))visible.add(k);
@@ -282,11 +308,11 @@ function visibleAdvisorKeys(){
  return visible;
 }
 function agencySummary(src,agency=$('agency').value){
- if(!src)return null;
+ if(!src||src.needsReload)return null;
  const key=norm(agency);
  if(key!=='ALL')return src.summary?.[key]||null;
  const parts=Object.values(src.summary||{});if(!parts.length)return null;
- return {name:'Todas las agencias',portfolio:parts.reduce((n,x)=>n+num(x.portfolio),0),advisors:globalAdvisors(src)};
+ return {name:'Todas las agencias',portfolio:parts.reduce((n,x)=>n+num(x.portfolio),0),mora:parts.every(x=>x.mora!=null)?parts.reduce((n,x)=>n+x.mora,0):null,moraCases:parts.every(x=>x.moraCases!=null)?parts.reduce((n,x)=>n+x.moraCases,0):null,advisors:globalAdvisors(src)};
 }
 function currentRecords(){const a=norm($('agency').value);return (state.current?.records||[]).filter(r=>a==='ALL'||norm(r.agency)===a)}
 function advisorRecords(){const visible=visibleAdvisorKeys();return (state.current?.records||[]).filter(r=>visible.has(norm(r.advisor)))}
@@ -319,19 +345,19 @@ function render(){
  $('currentInfo').textContent=state.current?`${state.current.fileName}${state.current.needsReload?' · requiere recarga':` · ${state.current.excludedCount||0} crédito(s) Fondo CHN excluido(s)`}.`:'Sin cartera actual cargada.';
  $('monthInfo').textContent=`${state.closures.length} cierre(s) mensual(es) almacenado(s).`;
  const curA=agencySummary(state.current),baseA=agencySummary(state.base),stats=currentAdvisorStats(),closure=selectedClosure();
- const portfolio=curA?.portfolio||0,basePortfolio=baseA?.portfolio??null;
+ const agencyMetric=agencyMetrics(),portfolio=curA?.portfolio||0,basePortfolio=agencyMetric.base;
  const recs=currentRecords(),disb=recs.filter(disbInMonth).reduce((s,r)=>s+r.disbursed,0),disbCases=recs.filter(disbInMonth).length;
  const moraRecs=recs.filter(r=>r.balance>0&&projectedDays(r)>30),mora=moraRecs.reduce((s,r)=>s+balanceAmount(r.balance),0),moraPct=portfolio?mora/portfolio*100:0;
  $('kPortfolio').textContent=money(portfolio);$('kCredits').textContent=`${recs.length} crédito(s)`;
- $('kBase').textContent=basePortfolio==null?'—':money(basePortfolio);
- if(basePortfolio!=null&&curA){const g=portfolio-basePortfolio;$('kGrowth').textContent=money(g);$('kGrowthPct').textContent=pct(basePortfolio?g/basePortfolio*100:0)}else{$('kGrowth').textContent='—';$('kGrowthPct').textContent='Falta base o cartera actual'}
+ $('kBase').textContent=basePortfolio==null?'—':money(basePortfolio);$('kBaseDate').textContent=agencyMetric.baseDate||'Sin base';
+ $('kGrowth').textContent=agencyMetric.acc==null?'—':money(agencyMetric.acc);$('kGrowthPct').textContent=agencyMetric.baseMonth?'Mes base · sin evaluación':agencyMetric.acc!=null&&basePortfolio?pct(agencyMetric.acc/basePortfolio*100):'Falta base o cartera actual';
  $('kDisb').textContent=money(disb);$('kDisbCases').textContent=`${disbCases} operación(es)`;$('kMora').textContent=money(mora);$('kMoraCases').textContent=`${moraRecs.length} caso(s)`;$('kMoraPct').textContent=pct(moraPct);
  renderHistory();renderCompare()
 }
 function renderHistory(){
  const a=norm($('agency').value);
  const list=state.closures.filter(c=>agencySummary(c)).sort((x,y)=>y.date.localeCompare(x.date));
- $('historyRows').innerHTML=list.length?list.map(c=>{const A=agencySummary(c);return `<tr><td><strong>${c.date}</strong></td><td>${esc(c.fileName)}</td><td class="money">${money(A.portfolio)}</td><td>${Object.keys(A.advisors||{}).length}</td><td><button class="btn btn-danger removeClose" data-date="${c.date}">Eliminar</button></td></tr>`}).join(''):`<tr><td colspan="5" style="text-align:center;padding:28px;color:#6c7b85">No hay cierres mensuales para esta agencia.</td></tr>`
+ $('historyRows').innerHTML=list.length?list.map(c=>{const A=agencySummary(c),m=snapshotMora(c,'agency',$('agency').value);return `<tr><td><strong>${c.date}</strong></td><td>${esc(c.fileName)}</td><td class="money">${money(A.portfolio)}</td><td>${Object.keys(A.advisors||{}).length}</td><td class="money">${cash(m.mora)}${m.mora==null?'<div class="note">Recargar cierre para calcular mora</div>':''}</td><td>${m.moraPct==null?'—':pct(m.moraPct)}</td><td>${m.moraCases??'—'}</td><td><button class="btn btn-danger removeClose" data-date="${c.date}">Eliminar</button></td></tr>`}).join(''):`<tr><td colspan="8" style="text-align:center;padding:28px;color:#6c7b85">No hay cierres mensuales para esta agencia.</td></tr>`
 }
 function renderCompare(){
  const c=selectedClosure(),cur=agencySummary(state.current),a=norm($('agency').value);
@@ -368,16 +394,36 @@ function assignedGoal(advisor){
  if(value==null){const legacy=Object.entries(state.goals).filter(([key])=>key.endsWith('|'+k)).map(([,v])=>v);const unique=[...new Set(legacy.map(v=>v===''?'':num(v)))];if(unique.length===1)value=unique[0];}
  return value==null||value===''?null:Math.max(0,num(value));
 }
+function monthDifference(from,to){
+ if(!from||!to)return 0;const [fy,fm]=from.split('-').map(Number),[ty,tm]=to.split('-').map(Number);return (ty-fy)*12+tm-fm;
+}
+function entityBaseline(kind,key,asOf=$('cutoff').value){
+ const value=src=>kind==='advisor'?advisorValue(src,key):agencySummary(src,key)?.portfolio??null;
+ const sources=[{src:state.base,date:'2025-12-31'},...state.closures.map(src=>({src,date:src.date}))];
+ if(state.current)sources.push({src:state.current,date:$('cutoff').value,provisional:true});
+ return sources.filter(x=>x.date&&x.date<=asOf&&value(x.src)>0)
+  .sort((a,b)=>a.date.localeCompare(b.date)||Number(!!a.provisional)-Number(!!b.provisional))
+  .map(x=>({...x,value:value(x.src)}))[0]||null;
+}
+function advisorBaseline(advisor,asOf=$('cutoff').value){return entityBaseline('advisor',advisor,asOf)}
+function entityMetrics(kind,key,src,date,previousSource){
+ const value=source=>kind==='advisor'?advisorValue(source,key):agencySummary(source,key)?.portfolio??null;
+ const first=entityBaseline(kind,key,date),current=value(src),previous=value(previousSource),goal=kind==='advisor'?assignedGoal(key):agencyGoal(key);
+ const months=first?Math.max(0,monthDifference(first.date,date)):0;
+ const base=first?.value??null,baseMonth=!!first&&months===0,active=current!=null&&current>0;
+ const x=growthMetrics(current,base,previous,goal,months);
+ if(baseMonth||!active)Object.assign(x,{acc:null,monthly:null,required:null,accTarget:null,monthTarget:null});
+ return {...x,months,baseDate:first?.date??'',baseProvisional:!!first?.provisional,baseMonth,active,status:baseMonth?'Mes base':!src?'Sin cierre':!active?'Sin cartera asignada':'Evaluado',monthlyGoal:!baseMonth&&active&&months>0?goal:null};
+}
+function advisorMetrics(advisor,src,date,previousSource){return entityMetrics('advisor',advisor,src,date,previousSource)}
 function metrics(x,p){
- const base=advisorValue(state.base,x.advisor),previous=advisorValue(p.closure,x.advisor),goal=assignedGoal(x.advisor);
- const current=state.current&&!state.current.needsReload?x.portfolio:null;
- const acc=current!=null&&base!=null?current-base:null,monthly=current!=null&&previous!=null?current-previous:null;
- const required=goal!=null&&p.months>0?goal*p.months:null;
- return {...x,current,base,previous,goal,acc,monthly,required,accTarget:base!=null&&required!=null?base+required:null,monthTarget:previous!=null&&goal!=null&&p.months>0?previous+goal:null};
+ const result={...x,...advisorMetrics(x.advisor,state.current,$('cutoff').value,p.closure)};
+ if(!result.active)Object.assign(result,{disb:null,mora:null,moraPct:null,moraCases:null});
+ return result;
 }
 function goalRows(){
  const p=period(),stats=currentAdvisorStats(),visible=visibleAdvisorKeys();
- [state.base,state.current,p.closure].forEach(src=>Object.values(globalAdvisors(src)).forEach(x=>{
+ [state.base,state.current,...state.closures.filter(c=>c.date<=$('cutoff').value)].forEach(src=>Object.values(globalAdvisors(src)).forEach(x=>{
  const k=norm(x.advisor);if(!visible.has(k))return;if(!stats[k])stats[k]={advisor:x.advisor,portfolio:0,disb:0,mora:0,moraPct:0,moraCases:0};
  }));
  // Cod Agencia 1106 corresponde a usuarios TO06; los usuarios externos quedan al final.
@@ -408,7 +454,7 @@ function compliance(value,required){
  return `<strong>${pct(gs.p)}</strong><div class="progress"><i style="width:${Math.min(100,Math.max(0,gs.p))}%"></i></div><span class="note">${gs.label}</span>`;
 }
 function metricCells(x,total=false){
- return `<td><strong>${esc(x.advisor)}</strong></td><td class="money">${cash(x.current)}</td><td class="money">${cash(x.base)}</td><td class="money">${cash(x.previous)}</td><td>${total?cash(x.goal):`<input class="goal" aria-label="Crecimiento mensual de ${esc(x.advisor)}" data-advisor="${esc(norm(x.advisor))}" inputmode="decimal" placeholder="Asignar monto" value="${x.goal==null?'':amount(x.goal)}">`}</td><td class="money">${cash(x.acc)}</td><td class="money">${cash(x.required)}</td><td class="money">${cash(x.accTarget)}</td><td>${compliance(x.acc,x.required)}</td><td class="money">${cash(x.monthly)}</td><td class="money">${cash(x.monthTarget)}</td><td>${compliance(x.monthly,period().months>0?x.goal:null)}</td><td class="money">${cash(x.disb)}</td><td class="money">${cash(x.mora)}</td><td>${pct(x.moraPct)}</td><td>${x.moraCases??'—'}</td><td>${total?'':`<button class="btn btn-light advisorDetail" data-advisor="${esc(x.advisor)}">Ver más detalle</button>`}</td>`;
+ return `<td><strong>${esc(x.advisor)}</strong>${total?'':`<div class="note">${esc(x.baseMonth?'Mes base':!x.active?'Sin cartera actual · historial':x.months+' mes(es) de meta')}</div>`}</td><td class="money">${cash(x.current)}</td><td class="money">${cash(x.base)}<div class="note">${esc(x.baseDate||'Sin base')}${x.baseProvisional?' · provisional':''}</div></td><td class="money">${cash(x.previous)}</td><td>${total?cash(x.goal):`<input class="goal" aria-label="Crecimiento mensual de ${esc(x.advisor)}" data-advisor="${esc(norm(x.advisor))}" inputmode="decimal" placeholder="Asignar monto" value="${x.goal==null?'':amount(x.goal)}">`}</td><td class="money">${cash(x.acc)}</td><td class="money">${cash(x.required)}</td><td class="money">${cash(x.accTarget)}</td><td>${x.baseMonth?'<span class="pill">Mes base</span>':!x.active?'<span class="pill">Sin cartera actual</span>':compliance(x.acc,x.required)}</td><td class="money">${cash(x.monthly)}</td><td class="money">${cash(x.monthTarget)}</td><td>${x.baseMonth?'<span class="pill">Mes base</span>':!x.active?'<span class="pill">Sin cartera actual</span>':compliance(x.monthly,x.monthlyGoal)}</td><td class="money">${cash(x.disb)}</td><td class="money">${cash(x.mora)}</td><td>${x.moraPct==null?'—':pct(x.moraPct)}</td><td>${x.moraCases??'—'}</td><td>${total?'':`<button class="btn btn-light advisorDetail" data-advisor="${esc(x.advisor)}">Ver más detalle</button>`}</td>`;
 }
 const originalRender=render;
 render=function(){
@@ -417,9 +463,9 @@ render=function(){
  $('advisorRows').innerHTML=rows.length?rows.map(x=>`<tr>${metricCells(x)}</tr>`).join('')+`<tr class="agency-total" style="background:#eaf4fb;font-weight:700">${metricCells(t,true)}</tr>`:'<tr><td colspan="17">Carga una cartera base o actual para configurar los asesores.</td></tr>';
  const agencies=$('agency').value==='ALL'?availableAgencies():[$('agency').value];
  $('agencyGoalEditor').innerHTML=agencies.map(name=>{const goal=agencyGoal(name);return `<label class="field">Crecimiento mensual · ${esc(name)} (Q)<input class="goal agencyGoal" data-agency="${esc(norm(name))}" aria-label="Meta mensual de ${esc(name)}" inputmode="decimal" placeholder="Asignar monto" value="${goal==null?'':amount(goal)}"></label>`}).join('');
- $('agencyGoals').innerHTML=`<div class="mini"><small>Crecimiento mensual asignado a la agencia</small><b>${cash(a.goal)}</b></div><div class="mini"><small>Crecimiento acumulado requerido · ${p.months} mes(es)</small><b>${cash(a.required)}</b></div><div class="mini"><small>Saldo meta acumulada</small><b>${cash(a.accTarget)}</b><p class="note">Crecimiento real: ${cash(a.acc)}</p>${compliance(a.acc,a.required)}</div><div class="mini"><small>Saldo meta mensual</small><b>${cash(a.monthTarget)}</b><p class="note">Crecimiento real del mes: ${cash(a.monthly)}</p>${compliance(a.monthly,p.months>0?a.goal:null)}</div>`;
- $('goalContext').textContent=`Metas del mes ${$('cutoff').value.slice(0,7)||'sin seleccionar'}. Cierre anterior requerido: ${p.previous||'—'}. `+(p.months<=0?'Selecciona una fecha desde enero de 2026. ':!agencySummary(p.closure)?'Falta cargar el cierre anterior para calcular la meta mensual. ':'')+(a.goal==null?'Asigna la meta propia de cada agencia para calcular su cumplimiento. ':'')+'El total de agencia incluye todos los créditos registrados en ella, aunque su usuario no aparezca en la tabla. Se ignoran los saldos negativos.';
- renderDetail();labelAdvisorCells();
+ $('agencyGoals').innerHTML=`<div class="mini"><small>Crecimiento mensual asignado a la agencia</small><b>${cash(a.goal)}</b></div><div class="mini"><small>Crecimiento acumulado requerido · ${a.mixedBases?'meses según agencia':a.months+' mes(es)'}</small><b>${cash(a.required)}</b></div><div class="mini"><small>Saldo meta acumulada</small><b>${cash(a.accTarget)}</b><p class="note">Crecimiento real: ${cash(a.acc)}</p>${a.baseMonth?'<span class="pill">Mes base · sin evaluación</span>':compliance(a.acc,a.required)}</div><div class="mini"><small>Saldo meta mensual</small><b>${cash(a.monthTarget)}</b><p class="note">Crecimiento real del mes: ${cash(a.monthly)}</p>${a.baseMonth?'<span class="pill">Mes base · sin evaluación</span>':compliance(a.monthly,a.monthlyGoal)}</div>`;
+ $('goalContext').textContent=`Metas del mes ${$('cutoff').value.slice(0,7)||'sin seleccionar'}. Cierre anterior requerido: ${p.previous||'—'}. `+(p.months<=0?'Selecciona una fecha desde enero de 2026. ':!agencySummary(p.closure)?'Falta cargar el cierre anterior para calcular la meta mensual. ':'')+(a.goal==null?'Asigna la meta propia de cada agencia para calcular su cumplimiento. ':'')+'Las agencias y los asesores nuevos usan su primer mes con cartera como base y se evalúan desde el mes siguiente. El total de agencia incluye todos los créditos registrados en ella, aunque su usuario no aparezca en la tabla. Se ignoran los saldos negativos.';
+ renderDetail();labelAdvisorCells();if(typeof renderReporting==='function')renderReporting();
 };
 $('advisorRows').oninput=e=>{
  const input=e.target;if(!input.matches('.goal'))return;
@@ -449,20 +495,46 @@ function growthMetrics(current,base,previous,goal,months){
  const required=goal!=null&&months>0?goal*months:null;
  return {current,base,previous,goal,acc,monthly,required,accTarget:base!=null&&required!=null?base+required:null,monthTarget:previous!=null&&goal!=null&&months>0?previous+goal:null};
 }
-function agencyMetrics(){const p=period();return growthMetrics(agencySummary(state.current)?.portfolio??null,agencySummary(state.base)?.portfolio??null,agencySummary(p.closure)?.portfolio??null,agencyGoal(),p.months)}
+function combinedAgencyMetrics(src,date,previousSource){
+ const rows=availableAgencies().map(name=>entityMetrics('agency',name,src,date,previousSource)).filter(x=>x.active);
+ const evaluated=rows.filter(x=>!x.baseMonth),sum=(items,key)=>items.every(x=>x[key]!=null)?items.reduce((n,x)=>n+x[key],0):null;
+ const current=agencySummary(src,'ALL')?.portfolio??null,base=sum(rows,'base'),goal=agencyGoal('ALL');
+ const months=rows.length?Math.max(...rows.map(x=>x.months)):0,baseMonth=!!rows.length&&!evaluated.length;
+ const acc=current!=null&&!baseMonth?sum(evaluated,'acc'):null,required=current!=null&&!baseMonth?sum(evaluated,'required'):null;
+ const monthly=current!=null&&!baseMonth?sum(evaluated,'monthly'):null,monthlyGoal=current!=null&&!baseMonth?sum(evaluated,'monthlyGoal'):null;
+ const dates=[...new Set(rows.map(x=>x.baseDate))];
+ const previous=agencySummary(previousSource,'ALL')?.portfolio??null;
+ const monthTargets=rows.map(x=>x.baseMonth?x.current:x.monthTarget);
+ return {current,base:rows.length?base:null,previous,goal,months,baseMonth,active:current!=null&&current>0,acc,required,monthly,monthlyGoal,accTarget:base!=null&&required!=null?base+required:null,monthTarget:monthlyGoal!=null&&monthTargets.every(x=>x!=null)?monthTargets.reduce((n,x)=>n+x,0):null,baseDate:dates.length===1?dates[0]:'Bases por agencia',mixedBases:dates.length>1};
+}
+function agencyMetrics(agency=$('agency').value,src=state.current,date=$('cutoff').value,previousSource=period().closure){
+ return norm(agency)==='ALL'?combinedAgencyMetrics(src,date,previousSource):entityMetrics('agency',agency,src,date,previousSource);
+}
 const ratio=(value,goal)=>value!=null&&goal>0?value/goal:null;
 const endOfMonth=(y,m)=>new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);
+function snapshotMora(src,kind,key){
+ if(!src||src.needsReload)return {mora:null,moraPct:null,moraCases:null};
+ const x=kind==='advisor'?globalAdvisors(src)[norm(key)]:agencySummary(src,key);
+ if(!x||x.mora==null)return {mora:null,moraPct:null,moraCases:null};
+ return {mora:x.mora,moraPct:x.portfolio>0?x.mora/x.portfolio*100:0,moraCases:x.moraCases};
+}
 function monthlyDetail(kind,key){
  const cutoff=$('cutoff').value;if(!cutoff||cutoff<'2026-01-01')return [];
  const value=src=>kind==='advisor'?advisorValue(src,key):agencySummary(src,key)?.portfolio??null;
  const goal=kind==='advisor'?assignedGoal(key):agencyGoal(key),base=value(state.base),months=period().months,rows=[];
+ const first=kind==='agency'&&norm(key)==='ALL'?null:entityBaseline(kind,key);
  for(let i=1;i<=months;i++){
- const y=2026+Math.floor((i-1)/12),m=(i-1)%12+1,date=endOfMonth(y,m),prevDate=endOfMonth(y,m-1);
- const closure=state.closures.find(c=>c.date===date&&c.date<=cutoff&&!c.needsReload);
- const provisional=!closure&&i===months&&!!state.current&&!state.current.needsReload;
- const src=closure||(provisional?state.current:null),previous=prevDate==='2025-12-31'?state.base:state.closures.find(c=>c.date===prevDate);
- const metrics=growthMetrics(value(src),base,value(previous),goal,i);
- rows.push({...metrics,date:provisional?cutoff:date,month:date.slice(0,7),status:closure?'Cierre cargado':provisional?'Provisional':'Sin cierre',monthlyPct:ratio(metrics.monthly,goal),accPct:ratio(metrics.acc,metrics.required)});
+  const y=2026+Math.floor((i-1)/12),m=(i-1)%12+1,date=endOfMonth(y,m),prevDate=endOfMonth(y,m-1);
+  const closure=state.closures.find(c=>c.date===date&&c.date<=cutoff&&!c.needsReload);
+  const provisional=!closure&&i===months&&!!state.current&&!state.current.needsReload;
+  const src=closure||(provisional?state.current:null),rowDate=provisional?cutoff:date;
+  if(!(kind==='agency'&&norm(key)==='ALL')&&(!first||date.slice(0,7)<first.date.slice(0,7)))continue;
+  // A loaded closure without this advisor is absence, never a zero balance or a loss.
+  if(src&&!(value(src)>0))continue;
+  const previous=prevDate==='2025-12-31'?state.base:state.closures.find(c=>c.date===prevDate);
+  const metrics=kind==='advisor'?advisorMetrics(key,src,rowDate,previous):agencyMetrics(key,src,rowDate,previous);
+  const mora=snapshotMora(src,kind,key);
+  rows.push({...metrics,...mora,date:rowDate,month:date.slice(0,7),status:metrics.baseMonth?'Mes base'+(provisional?' · provisional':''):closure?'Cierre cargado':provisional?'Provisional':'Sin cierre',moraStatus:src?(mora.mora==null?'Mora no disponible: recargar cierre':provisional?'Real al corte (sin proyección)':'Real al cierre'):'Sin cierre',monthlyPct:ratio(metrics.monthly,metrics.monthlyGoal),accPct:ratio(metrics.acc,metrics.required)});
  }
  return rows;
 }
@@ -471,9 +543,9 @@ function renderDetail(){
  $('detailPanel').hidden=!detailSelection;if(!detailSelection)return;
  const {kind,key}=detailSelection;
  $('detailTitle').textContent=`Detalle mensual · ${kind==='advisor'?'Asesor':'Agencia'} ${key==='ALL'?'Todas las agencias':key}`;
- $('detailNote').textContent=(kind==='advisor'?'Cartera total del usuario en todas las agencias. ':'Créditos registrados en la agencia seleccionada. ')+'Aporte = saldo al corte menos cierre anterior. Los porcentajes usan la meta mensual configurada actualmente. — indica datos faltantes o meta cero.';
+ $('detailNote').textContent=(kind==='advisor'?'Cartera total del usuario en todas las agencias. ':'Créditos registrados en la agencia seleccionada. ')+'Mes base sin evaluación; metas desde el mes siguiente. Mora real = saldo de créditos con más de 30 días, sin proyección. Aporte = saldo al corte menos cierre anterior. Los porcentajes usan la meta mensual configurada actualmente. — indica datos faltantes o meta cero.';
  const rows=monthlyDetail(kind,key);
- $('detailRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.month)}<div class="note">${x.date}</div></td><td>${x.status}</td><td class="money">${cash(x.previous)}</td><td class="money">${cash(x.current)}</td><td class="money">${cash(x.monthly)}</td><td class="money">${cash(x.goal)}</td><td>${x.monthlyPct==null?'—':pct(x.monthlyPct*100)}</td><td class="money">${cash(x.acc)}</td><td class="money">${cash(x.required)}</td><td>${x.accPct==null?'—':pct(x.accPct*100)}</td></tr>`).join(''):'<tr><td colspan="10">Selecciona una fecha de corte desde enero de 2026.</td></tr>';
+ $('detailRows').innerHTML=rows.length?rows.map(x=>`<tr><td>${esc(x.month)}<div class="note">${x.date}</div></td><td>${x.status}</td><td class="money">${cash(x.previous)}</td><td class="money">${cash(x.current)}</td><td class="money">${cash(x.monthly)}</td><td class="money">${cash(x.monthlyGoal)}</td><td>${x.monthlyPct==null?'—':pct(x.monthlyPct*100)}</td><td class="money">${cash(x.acc)}</td><td class="money">${cash(x.required)}</td><td>${x.accPct==null?'—':pct(x.accPct*100)}</td><td class="money">${cash(x.mora)}<div class="note">${esc(x.moraStatus)}</div></td><td>${x.moraPct==null?'—':pct(x.moraPct)}</td><td>${x.moraCases??'—'}</td></tr>`).join(''):'<tr><td colspan="13">Selecciona una fecha de corte desde enero de 2026.</td></tr>';
 }
 function openDetail(kind,key){detailSelection={kind,key};renderDetail();$('detailPanel').scrollIntoView({behavior:'smooth',block:'start'})}
 $('agencyDetail').onclick=()=>openDetail('agency',$('agency').value);
@@ -481,27 +553,7 @@ $('advisorRows').onclick=e=>{const b=e.target.closest('.advisorDetail');if(b)ope
 $('closeDetail').onclick=()=>{detailSelection=null;renderDetail()};
 $('agencyGoalEditor').oninput=$('advisorRows').oninput;
 $('agencyGoalEditor').onchange=e=>{if(!e.target.matches('.agencyGoal'))return;state.agencyGoals??={};state.agencyGoals[e.target.dataset.agency]=e.target.value.trim()===''?'':Math.max(0,num(e.target.value));save();render()};
-function exportReport(){
- if(typeof XLSX==='undefined')return setStatus('No se pudo cargar el lector de Excel.','error');
- const data=goalRows();if(!state.base&&!state.current&&!state.closures.length)return setStatus('Carga primero una cartera.','error');
- const wb=XLSX.utils.book_new();
- const sheet=(name,rows,percentColumns=[],numericStart=1)=>{const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=rows[0].map(()=>({wch:25}));for(let r=numericStart;r<rows.length;r++)for(let c=0;c<rows[r].length;c++){const cell=ws[XLSX.utils.encode_cell({r,c})];if(cell?.t==='n')cell.z=percentColumns.includes(c)?'0.00%':'#,##0.00';}XLSX.utils.book_append_sheet(wb,ws,name)};
- const metricHeader=['NOMBRE','CARTERA ACTUAL','BASE DIC-25','CIERRE ANTERIOR','META CRECIMIENTO MENSUAL','CRECIMIENTO ACUMULADO REAL','CRECIMIENTO ACUMULADO REQUERIDO','SALDO META ACUMULADA','CUMPLIMIENTO ACUMULADO','CRECIMIENTO MENSUAL REAL','SALDO META MENSUAL','CUMPLIMIENTO MENSUAL'];
- const metricRow=(name,x)=>[name,x.current,x.base,x.previous,x.goal,x.acc,x.required,x.accTarget,ratio(x.acc,x.required),x.monthly,x.monthTarget,period().months>0?ratio(x.monthly,x.goal):null];
- const agencyNames=$('agency').value==='ALL'?availableAgencies():[$('agency').value],p=period();
- const agencyRows=agencyNames.map(name=>metricRow(name,growthMetrics(agencySummary(state.current,name)?.portfolio??null,agencySummary(state.base,name)?.portfolio??null,agencySummary(p.closure,name)?.portfolio??null,agencyGoal(name),p.months)));
- if($('agency').value==='ALL')agencyRows.push(metricRow('TOTAL AGENCIAS',agencyMetrics()));
- sheet('Metas agencias',[metricHeader,...agencyRows],[8,11]);
- const advisorExport=x=>[...metricRow(x.advisor,x),x.disb,x.mora,x.moraPct/100,x.moraCases];
- sheet('Metas asesores',[[...metricHeader,'DESEMBOLSADO MES','MORA >30','% MORA','CASOS MORA'],...data.map(advisorExport),advisorExport(agencyTableTotal())],[8,11,14]);
- const detailHeader=['NOMBRE','MES','FECHA','ESTADO','SALDO ANTERIOR','SALDO AL CORTE','APORTE DEL MES','META CRECIMIENTO MENSUAL','CUMPLIMIENTO MENSUAL','CRECIMIENTO ACUMULADO','META CRECIMIENTO ACUMULADA','CUMPLIMIENTO ACUMULADO'];
- const details=(kind,key)=>monthlyDetail(kind,key).map(x=>[key,x.month,x.date,x.status,x.previous,x.current,x.monthly,x.goal,x.monthlyPct,x.acc,x.required,x.accPct]);
- sheet('Detalle agencias',[detailHeader,...agencyNames.flatMap(name=>details('agency',name))],[8,11]);
- sheet('Detalle asesores',[detailHeader,...data.flatMap(x=>details('advisor',x.advisor))],[8,11]);
- const history=[['FECHA','ARCHIVO','CARTERA AGENCIA','ASESORES']];state.closures.filter(c=>agencySummary(c)).sort((x,y)=>x.date.localeCompare(y.date)).forEach(c=>history.push([c.date,c.fileName,agencySummary(c).portfolio,Object.keys(agencySummary(c).advisors||{}).length]));sheet('Cierres',history);
- sheet('Información',[['CAMPO','VALOR'],['Fecha de corte',$('cutoff').value],['Filtro agencia',$('agency').value],['Agencias','Solo créditos registrados en cada agencia'],['Asesores','Cartera global por usuario; puede diferir del total de agencia'],['Aporte mensual','Saldo al corte menos saldo del cierre inmediatamente anterior'],['Metas','Montos mensuales configurados; se aplican constantes desde enero de 2026'],['Vacíos','Datos faltantes o porcentaje no aplicable'],['Exclusión','Producto Asignado = Fondo CHN, en base, cierres y actual']]);
- XLSX.writeFile(wb,`Dashboard_Cartera_${norm($('agency').value)}_${$('cutoff').value}.xlsx`);setStatus('Reporte con metas y detalle mensual generado.','ok');
-}
+function exportReport(){return downloadExcelReport()}
 $('exportBtn').onclick=exportReport;
 $('clearData').onclick=async()=>{
  if(!confirm('¿Borrar todos los datos del dashboard? Se eliminarán la cartera base, la cartera actual, todos los cierres mensuales, las metas y la configuración guardada en este navegador.'))return;
@@ -534,6 +586,9 @@ const ready=initialize();
 
 
 </script>
+<script src="./assets/jspdf.umd.min.js"></script>
+<script src="./assets/jspdf.plugin.autotable.min.js"></script>
+<script src="./reports.js"></script>
 <script src="./pwa.js" defer></script>
 </body>
 </html>

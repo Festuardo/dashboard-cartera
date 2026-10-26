@@ -58,6 +58,7 @@ footer{text-align:center;color:#86939d;font-size:11px;padding:18px}
 .report-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.chart-card{border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}.chart-card h3{font-size:15px;margin:0 0 10px}.chart-card svg{display:block;width:100%;height:auto}.chart-scroll{max-height:520px;overflow:auto}.chart-legend{font-size:12px;color:var(--muted);margin:10px 0}.chart-legend span{display:inline-block;margin-right:15px}.chart-legend i{display:inline-block;width:10px;height:10px;margin-right:5px;border-radius:3px}
 @media(max-width:900px){.report-charts{grid-template-columns:1fr}}
 @media(max-width:700px){.chart-scroll svg{min-width:560px}}
+.advisor-table tbody tr[data-advisor-row]:hover{background:#eaf4ff}.advisor-table tbody tr[data-advisor-row]:active{background:#d9eafc}#disbursementPanel{border:1px solid #cbdff3}#disbursementPanel .mini{background:#f1f7ff;border-radius:12px}#disbursementPanel .matchCredit{max-width:230px;padding:7px;border:1px solid #c4d4e6;border-radius:8px}
 </style>
 </head>
 <body>
@@ -109,11 +110,11 @@ footer{text-align:center;color:#86939d;font-size:11px;padding:18px}
 <section class="panel">
   <div class="section-title">
     <div><h2>Desempeño por asesor</h2><small>Asesores de la agencia primero · otros usuarios con desembolsos del mes al final</small></div>
-    <div class="toolbar"><button id="clearData" class="btn btn-danger">Limpiar todos los datos</button><button id="exportBtn" class="btn btn-light">Descargar Excel</button><button id="exportPdfBtn" class="btn btn-primary">Descargar PDF</button></div>
+    <div class="toolbar"><button id="toggleAdvisorMetrics" class="btn btn-light">Ver todos los indicadores</button><button id="clearData" class="btn btn-danger">Limpiar todos los datos</button><button id="exportBtn" class="btn btn-light">Descargar Excel</button><button id="exportPdfBtn" class="btn btn-primary">Descargar PDF</button></div>
   </div>
-  <p class="table-hint advisor-hint">Desliza la tabla horizontalmente para ver todas las metas.</p><div class="table-wrap advisor-table-wrap" tabindex="0" aria-label="Desempeño por asesor">
+  <p class="table-hint advisor-hint">Doble clic sobre un asesor para ver sus créditos desembolsados. Usa «Ver indicadores» para consultar todas las metas.</p><div class="table-wrap advisor-table-wrap" tabindex="0" aria-label="Desempeño por asesor">
     <table class="advisor-table">
-      <thead><tr><th>Asesor</th><th>Cartera actual</th><th>Base del asesor</th><th>Cierre mes anterior</th><th>Crecimiento mensual asignado (Q)</th><th>Crecimiento acumulado real</th><th>Crecimiento acumulado requerido</th><th>Saldo meta acumulada</th><th>Cumplimiento acumulado</th><th>Crecimiento mensual real</th><th>Saldo meta mensual</th><th>Cumplimiento mensual</th><th>Desembolsado mes</th><th>Mora proyectada &gt;30</th><th>% mora proyectada</th><th>Casos mora</th><th>Detalle mensual</th></tr></thead>
+      <thead><tr><th>Asesor</th><th>Cartera actual</th><th>Crecimiento mensual</th><th>Cumplimiento mensual</th><th>Desembolsado mes</th><th>% mora proyectada</th><th>Opciones</th></tr></thead>
       <tbody id="advisorRows"></tbody>
     </table>
   </div>
@@ -143,6 +144,13 @@ footer{text-align:center;color:#86939d;font-size:11px;padding:18px}
 </section>
 
 
+<section id="disbursementPanel" class="panel" hidden>
+<div class="section-title"><div><h2 id="disbursementTitle">Créditos desembolsados</h2><small id="disbursementNote">Conciliación contra el cierre del mes anterior</small></div><button id="closeDisbursements" class="btn btn-light">Cerrar</button></div>
+<div class="toolbar" style="margin-bottom:12px"><label>Desde <input type="date" id="disbFrom"></label><label>Hasta <input type="date" id="disbTo"></label><button class="btn btn-light" id="exportDisbursements">Exportar CSV</button></div>
+<div id="disbursementSummary" class="history-cards" style="margin-bottom:14px"></div>
+<p class="note">El líquido se calcula con el saldo del cierre anterior, no con el saldo a la fecha de cancelación. Cuando existan varias posibles relaciones, se solicita selección manual.</p>
+<div class="table-wrap"><table class="advisor-table" style="min-width:1050px"><thead><tr><th>ID asociado</th><th>Nombre</th><th>No. crédito actual</th><th>No. crédito anterior</th><th>Fecha desembolso</th><th>Monto desembolsado</th><th>Líquido estimado</th><th>Estado</th></tr></thead><tbody id="disbursementRows"></tbody></table></div>
+</section>
 <section id="detailPanel" class="panel" hidden>
 <div class="section-title"><div><h2 id="detailTitle">Detalle mensual</h2><small id="detailNote"></small></div><button id="closeDetail" class="btn btn-light">Cerrar detalle</button></div>
 <div class="table-wrap"><table style="min-width:1250px"><thead><tr><th>Mes / corte</th><th>Estado</th><th>Saldo anterior</th><th>Saldo al corte</th><th>Aporte del mes</th><th>Meta crecimiento mensual</th><th>Cumplimiento mensual</th><th>Crecimiento acumulado</th><th>Meta crecimiento acumulada</th><th>Cumplimiento acumulado</th><th>Mora real &gt;30 días</th><th>% mora real</th><th>Casos mora</th></tr></thead><tbody id="detailRows"></tbody></table></div>
@@ -235,6 +243,8 @@ async function readPortfolioFile(file,keepDetails){
   agencyCode:findCol(h,['COD AGENCIA','CÓD AGENCIA','CODIGO AGENCIA','CÓDIGO AGENCIA']),
   advisor:findCol(h,['USUARIO DE ASESOR','USUARIO ASESOR','ASESOR']),
   credit:findCol(h,['NÚMERO DE CRÉDITO','NUMERO DE CREDITO','CREDITO']),
+  cua:findCol(h,['ID ASOCIADO','CUA','NO SOCIO']),
+  associate:findCol(h,['NOMBRES DE ASOCIADOS','NOMBRE ASOCIADO']),
   product:findCol(h,['PRODUCTO ASIGNADO']),
   balance:findCol(h,['SALDO ACTUAL','SALDO']),
   days:findCol(h,['DIAS DE MORA','DÍAS DE MORA','MORA']),
@@ -244,7 +254,7 @@ async function readPortfolioFile(file,keepDetails){
  const missing=['agency','advisor','balance'].filter(k=>ix[k]<0);if(missing.length)throw new Error('No se reconocieron: '+missing.join(', '));
  if(ix.product<0)throw new Error('Falta la columna Producto Asignado. No se cargó el archivo porque no se puede excluir Fondo CHN.');
  const allRecords=data.slice(1).filter(r=>r&&r.some(v=>v!==''&&v!=null)).map((r,i)=>({
-  agency:txt(r[ix.agency]),agencyCode:ix.agencyCode>=0?txt(r[ix.agencyCode]):'',advisor:txt(r[ix.advisor]),product:txt(r[ix.product]),credit:ix.credit>=0?txt(r[ix.credit]):String(i+1),balance:num(r[ix.balance]),
+  agency:txt(r[ix.agency]),agencyCode:ix.agencyCode>=0?txt(r[ix.agencyCode]):'',advisor:txt(r[ix.advisor]),product:txt(r[ix.product]),credit:ix.credit>=0?txt(r[ix.credit]):String(i+1),cua:ix.cua>=0?txt(r[ix.cua]):'',associate:ix.associate>=0?txt(r[ix.associate]):'',balance:num(r[ix.balance]),
   days:ix.days>=0?num(r[ix.days]):0,disbursed:ix.disbursed>=0?num(r[ix.disbursed]):0,disbDate:ix.disbDate>=0?parseDate(r[ix.disbDate]):''
  })).filter(r=>r.agency&&r.balance!==0);
  const excluded=allRecords.filter(r=>norm(r.product)==='FONDOCHN'),recs=allRecords.filter(r=>norm(r.product)!=='FONDOCHN');
@@ -373,7 +383,7 @@ async function loadCurrent(){
 }
 async function loadClosure(){
  const f=$('monthFile').files[0],date=$('monthDate').value;if(!date)return setStatus('Selecciona la fecha de cierre mensual.','error');
- try{setStatus('Procesando cierre mensual…');const x=await readPortfolioFile(f,false);const c={...x,date};
+ try{setStatus('Procesando cierre mensual…');const x=await readPortfolioFile(f,true);const c={...x,date};
  state.closures=state.closures.filter(z=>z.date!==date);state.closures.push(c);state.closures.sort((a,b)=>a.date.localeCompare(b.date));save();render();setStatus(`Cierre ${date} agregado correctamente.`,'ok')}catch(e){setStatus(e.message,'error')}
 }
 $('baseBtn').onclick=loadBase;$('currentBtn').onclick=loadCurrent;$('monthBtn').onclick=loadClosure;
@@ -453,14 +463,23 @@ function compliance(value,required){
  const gs=goalStatus(value,required);
  return `<strong>${pct(gs.p)}</strong><div class="progress"><i style="width:${Math.min(100,Math.max(0,gs.p))}%"></i></div><span class="note">${gs.label}</span>`;
 }
+let expandedAdvisorMetrics=false;
 function metricCells(x,total=false){
- return `<td><strong>${esc(x.advisor)}</strong>${total?'':`<div class="note">${esc(x.baseMonth?'Mes base':!x.active?'Sin cartera actual · historial':x.months+' mes(es) de meta')}</div>`}</td><td class="money">${cash(x.current)}</td><td class="money">${cash(x.base)}<div class="note">${esc(x.baseDate||'Sin base')}${x.baseProvisional?' · provisional':''}</div></td><td class="money">${cash(x.previous)}</td><td>${total?cash(x.goal):`<input class="goal" aria-label="Crecimiento mensual de ${esc(x.advisor)}" data-advisor="${esc(norm(x.advisor))}" inputmode="decimal" placeholder="Asignar monto" value="${x.goal==null?'':amount(x.goal)}">`}</td><td class="money">${cash(x.acc)}</td><td class="money">${cash(x.required)}</td><td class="money">${cash(x.accTarget)}</td><td>${x.baseMonth?'<span class="pill">Mes base</span>':!x.active?'<span class="pill">Sin cartera actual</span>':compliance(x.acc,x.required)}</td><td class="money">${cash(x.monthly)}</td><td class="money">${cash(x.monthTarget)}</td><td>${x.baseMonth?'<span class="pill">Mes base</span>':!x.active?'<span class="pill">Sin cartera actual</span>':compliance(x.monthly,x.monthlyGoal)}</td><td class="money">${cash(x.disb)}</td><td class="money">${cash(x.mora)}</td><td>${x.moraPct==null?'—':pct(x.moraPct)}</td><td>${x.moraCases??'—'}</td><td>${total?'':`<button class="btn btn-light advisorDetail" data-advisor="${esc(x.advisor)}">Ver más detalle</button>`}</td>`;
+ const name=`<strong>${esc(x.advisor)}</strong>${total?'':`<div class="note">Doble clic para consultar desembolsos</div>`}`;
+ const compact=`<td>${name}</td><td class="money">${cash(x.current)}</td><td class="money">${cash(x.monthly)}</td><td>${x.baseMonth?'<span class="pill">Mes base</span>':!x.active?'<span class="pill">Sin cartera actual</span>':compliance(x.monthly,x.monthlyGoal)}</td><td class="money">${cash(x.disb)}</td><td>${x.moraPct==null?'—':pct(x.moraPct)}</td><td>${total?'':`<button class="btn btn-light advisorDetail" data-advisor="${esc(x.advisor)}">Detalle mensual</button>`}</td>`;
+ if(!expandedAdvisorMetrics)return compact;
+ return `<td>${name}</td><td class="money">${cash(x.current)}</td><td class="money">${cash(x.base)}</td><td class="money">${cash(x.previous)}</td><td>${total?cash(x.goal):`<input class="goal" aria-label="Crecimiento mensual de ${esc(x.advisor)}" data-advisor="${esc(norm(x.advisor))}" inputmode="decimal" placeholder="Asignar monto" value="${x.goal==null?'':amount(x.goal)}">`}</td><td class="money">${cash(x.acc)}</td><td class="money">${cash(x.required)}</td><td class="money">${cash(x.accTarget)}</td><td>${compliance(x.acc,x.required)}</td><td class="money">${cash(x.monthly)}</td><td class="money">${cash(x.monthTarget)}</td><td>${compliance(x.monthly,x.monthlyGoal)}</td><td class="money">${cash(x.disb)}</td><td class="money">${cash(x.mora)}</td><td>${x.moraPct==null?'—':pct(x.moraPct)}</td><td>${x.moraCases??'—'}</td><td>${total?'':`<button class="btn btn-light advisorDetail" data-advisor="${esc(x.advisor)}">Detalle mensual</button>`}</td>`;
 }
+const compactHeaders=['Asesor','Cartera actual','Crecimiento mensual','Cumplimiento mensual','Desembolsado mes','% mora proyectada','Opciones'];
+const fullHeaders=['Asesor','Cartera actual','Base del asesor','Cierre mes anterior','Crecimiento mensual asignado (Q)','Crecimiento acumulado real','Crecimiento acumulado requerido','Saldo meta acumulada','Cumplimiento acumulado','Crecimiento mensual real','Saldo meta mensual','Cumplimiento mensual','Desembolsado mes','Mora proyectada >30','% mora proyectada','Casos mora','Detalle mensual'];
+function renderMetricHeaders(){document.querySelector('.advisor-table thead tr').innerHTML=(expandedAdvisorMetrics?fullHeaders:compactHeaders).map(h=>`<th>${esc(h)}</th>`).join('')}
+
 const originalRender=render;
 render=function(){
  originalRender();
  const p=period(),rows=goalRows(),t=agencyTableTotal(),a=agencyMetrics();
- $('advisorRows').innerHTML=rows.length?rows.map(x=>`<tr>${metricCells(x)}</tr>`).join('')+`<tr class="agency-total" style="background:#eaf4fb;font-weight:700">${metricCells(t,true)}</tr>`:'<tr><td colspan="17">Carga una cartera base o actual para configurar los asesores.</td></tr>';
+ renderMetricHeaders();
+ $('advisorRows').innerHTML=rows.length?rows.map(x=>`<tr data-advisor-row="${esc(x.advisor)}" title="Doble clic para ver desembolsos" style="cursor:pointer">${metricCells(x)}</tr>`).join('')+`<tr class="agency-total" style="background:#eaf4fb;font-weight:700">${metricCells(t,true)}</tr>`:'<tr><td colspan="${expandedAdvisorMetrics?17:7}">Carga una cartera base o actual para configurar los asesores.</td></tr>';
  const agencies=$('agency').value==='ALL'?availableAgencies():[$('agency').value];
  $('agencyGoalEditor').innerHTML=agencies.map(name=>{const goal=agencyGoal(name);return `<label class="field">Crecimiento mensual · ${esc(name)} (Q)<input class="goal agencyGoal" data-agency="${esc(norm(name))}" aria-label="Meta mensual de ${esc(name)}" inputmode="decimal" placeholder="Asignar monto" value="${goal==null?'':amount(goal)}"></label>`}).join('');
  $('agencyGoals').innerHTML=`<div class="mini"><small>Crecimiento mensual asignado a la agencia</small><b>${cash(a.goal)}</b></div><div class="mini"><small>Crecimiento acumulado requerido · ${a.mixedBases?'meses según agencia':a.months+' mes(es)'}</small><b>${cash(a.required)}</b></div><div class="mini"><small>Saldo meta acumulada</small><b>${cash(a.accTarget)}</b><p class="note">Crecimiento real: ${cash(a.acc)}</p>${a.baseMonth?'<span class="pill">Mes base · sin evaluación</span>':compliance(a.acc,a.required)}</div><div class="mini"><small>Saldo meta mensual</small><b>${cash(a.monthTarget)}</b><p class="note">Crecimiento real del mes: ${cash(a.monthly)}</p>${a.baseMonth?'<span class="pill">Mes base · sin evaluación</span>':compliance(a.monthly,a.monthlyGoal)}</div>`;
@@ -550,9 +569,49 @@ function renderDetail(){
 function openDetail(kind,key){detailSelection={kind,key};renderDetail();$('detailPanel').scrollIntoView({behavior:'smooth',block:'start'})}
 $('agencyDetail').onclick=()=>openDetail('agency',$('agency').value);
 $('advisorRows').onclick=e=>{const b=e.target.closest('.advisorDetail');if(b)openDetail('advisor',b.dataset.advisor)};
+$('advisorRows').ondblclick=e=>{if(e.target.closest('button,input'))return;const r=e.target.closest('[data-advisor-row]');if(r)openDisbursements(r.dataset.advisor)};
 $('closeDetail').onclick=()=>{detailSelection=null;renderDetail()};
 $('agencyGoalEditor').oninput=$('advisorRows').oninput;
 $('agencyGoalEditor').onchange=e=>{if(!e.target.matches('.agencyGoal'))return;state.agencyGoals??={};state.agencyGoals[e.target.dataset.agency]=e.target.value.trim()===''?'':Math.max(0,num(e.target.value));save();render()};
+let chosenDisbAdvisor='', manualMatches={};
+const creditKey=v=>String(v??'').trim().replace(/\.0$/,'');
+function disbursementData(advisor){
+ const previous=period().closure, current=state.current;
+ if(!current?.records?.length)return {error:'Carga la cartera actual para consultar desembolsos.',rows:[]};
+ if(!previous?.records)return {error:'Es necesario volver a cargar el cierre del mes anterior para conservar los números de crédito y saldos individuales. Los cierres guardados anteriormente solo contienen totales.',rows:[]};
+ const byCua=new Map();
+ previous.records.forEach(r=>{const k=creditKey(r.cua);if(!k)return;if(!byCua.has(k))byCua.set(k,[]);byCua.get(k).push(r)});
+ const allCurrentByCua=new Map();
+ current.records.forEach(r=>{const k=creditKey(r.cua);if(!k)return;if(!allCurrentByCua.has(k))allCurrentByCua.set(k,[]);allCurrentByCua.get(k).push(r)});
+ const rows=current.records.filter(r=>norm(r.advisor)===norm(advisor)&&disbInMonth(r)&&r.disbursed>0).map(r=>{
+  const key=creditKey(r.cua),prev=byCua.get(key)||[],now=allCurrentByCua.get(key)||[];
+  const previousNumbers=new Set(prev.map(x=>creditKey(x.credit)));
+  if(previousNumbers.has(creditKey(r.credit)))return null; // Crédito ya vigente: no es nuevo.
+  const nowNumbers=new Set(now.map(x=>creditKey(x.credit)));
+  const missing=prev.filter(x=>!nowNumbers.has(creditKey(x.credit)));
+  const identity=key+'|'+creditKey(r.credit);
+  const selected=missing.find(x=>creditKey(x.credit)===manualMatches[identity]);
+  const matched=missing.length===1?missing[0]:selected;
+  const status=!key?'Verificar CUA':missing.length>1&&!selected?'Revisar relación':matched?'Ampliación':prev.length?'Posible crédito adicional':'Nuevo';
+  return {r,identity,missing,matched,status,liquid:matched?r.disbursed-num(matched.balance):missing.length>1?null:prev.length?null:r.disbursed};
+ }).filter(Boolean).sort((a,b)=>(a.r.disbDate||'').localeCompare(b.r.disbDate||'')||creditKey(a.r.credit).localeCompare(creditKey(b.r.credit)));
+ return {rows};
+}
+function renderDisbursements(){
+ if(!chosenDisbAdvisor)return;
+ const {rows,error}=disbursementData(chosenDisbAdvisor),from=$('disbFrom').value,to=$('disbTo').value;
+ $('disbursementNote').textContent=error||'Conciliación con cierre '+(period().previous||'no seleccionado')+' · Líquido basado en saldo anterior';
+ const selected=rows.filter(x=>(!from||x.r.disbDate>=from)&&(!to||x.r.disbDate<=to));
+ const totalGross=selected.reduce((n,x)=>n+x.r.disbursed,0),totalLiquid=selected.reduce((n,x)=>n+(x.liquid??0),0);
+ $('disbursementSummary').innerHTML=`<div class="mini"><small>Operaciones</small><b>${selected.length}</b></div><div class="mini"><small>Desembolsado bruto</small><b>${money(totalGross)}</b></div><div class="mini"><small>Líquido estimado conocido</small><b>${money(totalLiquid)}</b></div><div class="mini"><small>Por verificar</small><b>${selected.filter(x=>x.liquid==null).length}</b></div>`;
+ $('disbursementRows').innerHTML=error?`<tr><td colspan="8">${esc(error)}</td></tr>`:selected.length?selected.map(x=>{const r=x.r;const picker=x.missing.length>1?`<select class="matchCredit" data-id="${esc(x.identity)}"><option value="">Seleccionar crédito</option>${x.missing.map(m=>`<option value="${esc(creditKey(m.credit))}" ${x.matched===m?'selected':''}>${esc(creditKey(m.credit))} · ${money(m.balance)}</option>`).join('')}</select>`:esc(x.matched?creditKey(x.matched.credit):'—');return `<tr><td data-label="ID asociado">${esc(r.cua||'—')}</td><td data-label="Nombre">${esc(r.associate||'—')}</td><td data-label="Crédito actual">${esc(r.credit)}</td><td data-label="Crédito anterior">${picker}</td><td data-label="Fecha">${esc(r.disbDate||'—')}</td><td data-label="Desembolsado" class="money">${money(r.disbursed)}</td><td data-label="Líquido" class="money">${x.liquid==null?'Por verificar':money(x.liquid)}</td><td data-label="Estado">${esc(x.status)}</td></tr>`}).join(''):'<tr><td colspan="8">No hay desembolsos identificados para este asesor en el mes seleccionado.</td></tr>';
+}
+function openDisbursements(advisor){chosenDisbAdvisor=advisor;manualMatches={};$('disbursementTitle').textContent='Créditos desembolsados · '+advisor;const month=$('cutoff').value.slice(0,7);$('disbFrom').value=month+'-01';$('disbTo').value=$('cutoff').value;renderDisbursements();$('disbursementPanel').hidden=false;$('disbursementPanel').scrollIntoView({behavior:'smooth',block:'start'})}
+$('closeDisbursements').onclick=()=>{$('disbursementPanel').hidden=true;chosenDisbAdvisor=''};
+$('disbFrom').onchange=renderDisbursements;$('disbTo').onchange=renderDisbursements;
+$('disbursementRows').onchange=e=>{if(e.target.matches('.matchCredit')){manualMatches[e.target.dataset.id]=e.target.value;renderDisbursements()}};
+$('exportDisbursements').onclick=()=>{if(!chosenDisbAdvisor)return;const data=disbursementData(chosenDisbAdvisor);if(data.error){alert(data.error);return;}const from=$('disbFrom').value,to=$('disbTo').value;const head=['ID asociado','Nombre','No. crédito actual','No. crédito anterior','Fecha desembolso','Monto desembolsado','Líquido estimado','Estado'];const values=data.rows.filter(x=>(!from||x.r.disbDate>=from)&&(!to||x.r.disbDate<=to)).map(x=>[x.r.cua,x.r.associate,x.r.credit,x.matched?.credit||'',x.r.disbDate,x.r.disbursed,x.liquid??'',x.status]);const csv='\ufeff'+[head,...values].map(row=>row.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='desembolsos_'+chosenDisbAdvisor+'_'+$('cutoff').value.slice(0,7)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000)};
+$('toggleAdvisorMetrics').onclick=()=>{expandedAdvisorMetrics=!expandedAdvisorMetrics;$('toggleAdvisorMetrics').textContent=expandedAdvisorMetrics?'Ver tabla resumida':'Ver todos los indicadores';render()};
 function exportReport(){return downloadExcelReport()}
 $('exportBtn').onclick=exportReport;
 $('clearData').onclick=async()=>{
